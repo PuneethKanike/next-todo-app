@@ -1,7 +1,8 @@
 "use client"
 
 import Todo from "@/components/Todo";
-import { useState } from "react";
+import axios from "axios";
+import { useEffect, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -12,6 +13,39 @@ export default function Home() {
     title:"",
     description:""
   })
+
+  const [todoData, setTodoData] = useState([]);
+
+  const fetchTodos = async () => {
+    const response = await axios('/api');
+    setTodoData(response.data.todos)
+  }
+
+  const deleteTodo = async (id) => {
+    const response = await axios.delete('/api',{
+      params:{
+        mongoId:id
+      }
+    });
+    toast.success(response.data.message)
+    await fetchTodos()
+  }
+
+  const completeTodo = async (id) => {
+    const response = await axios.put('/api',{}, {
+      params:{
+        mongoId:id
+      }
+    })
+    toast.success(response.data.message)
+    await fetchTodos()
+  }
+
+  useEffect(()=>{
+    fetchTodos()
+  },[])
+
+  console.log(todoData)
 
   const onChangeHandler = (e) => { 
     const name = e.target.name;
@@ -24,7 +58,13 @@ export default function Home() {
     e.preventDefault();
     
     try {
-      toast.success("Todo added successfully")
+      const response = await axios.post('/api',formdata)
+      toast.success(response.data.message)
+      setFormData({
+        title:"",
+        description:""
+      })
+      await fetchTodos()
     } catch (error) {
       toast.error("Something went wrong")
     }
@@ -36,34 +76,44 @@ export default function Home() {
   return (
     <>
      <ToastContainer  />
-      <form onSubmit={onSubmitHandler} className="flex items-start flex-col gap-2 w-[80%] max-w-[600px] mt-24 px-2 mx-auto">
+      <form onSubmit={onSubmitHandler} className="flex flex-col gap-4 w-[90%] max-w-[600px] mt-24 p-6 bg-white shadow-lg rounded-lg mx-auto">
         <input type="text" value={formdata.title} onChange={onChangeHandler} name="title" placeholder="Enter title" className="
           px-3
           py-2
           border-2
-          w-full
+          border-gray-300
           rounded-md
+          w-full
+          focus:outline-none
+          focus:border-blue-400
         " />
         <textarea value={formdata.description} name="description" onChange={onChangeHandler} placeholder="Enter description" className="
           px-3
           py-2
           border-2
-          w-full
+          border-gray-300
           rounded-md
+          w-full
+          focus:outline-none
+          focus:border-blue-400
         "></textarea>
         <button type="submit" className="
-        bg-blue-400
+        bg-blue-500
         py-3
         px-11
         text-white
         rounded-md
+        shadow-md
+        hover:bg-blue-600
+        transition-all
+        duration-150
         ">Add Todo</button>
       </form>
       
 
-<div className="relative overflow-x-auto mt-24 w-[60%] mx-auto">
-    <table className="w-full text-sm text-left rtl:text-right text-gray-500">
-        <thead className="text-xs text-gray-700 uppercase bg-gray-50 ">
+      <div className="relative overflow-x-auto mt-12 w-[80%] mx-auto">
+        <table className="w-full text-sm text-left text-gray-500 shadow-md rounded-lg">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-100 rounded-t-lg">
             <tr>
                 <th scope="col" className="px-6 py-3">
                     Id
@@ -81,16 +131,15 @@ export default function Home() {
                     Action
                 </th>
             </tr>
-        </thead>
-        <tbody>
-            
-            <Todo/>
-            <Todo/>
-            <Todo/>
-            
-        </tbody>
-    </table>
-</div>
+          </thead>
+          <tbody>
+            {todoData.map((item, index)=>{
+                return <Todo key={index} id={index} title={item.title} description={item.description} complete={item.isCompleted} mongoId={item._id} deleteTodo={deleteTodo} completeTodo={completeTodo}/>
+            })}
+              
+          </tbody>
+        </table>
+      </div>
 
     </>
   );
